@@ -1,57 +1,37 @@
-import React, { useMemo, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Info, Plus, Minus, RefreshCw } from "lucide-react";
-import { motion } from "framer-motion";
+import { useMemo, useState } from "react";
 
-/**
- * Wayfair Specialty Brands Budget Calculator (Projection Mode)
- * - Supports Joss & Main, AllModern, Birch Lane
- * - Room presets with editable line items and price ranges
- * - Good/Better/Best tiering mapped to range bands
- * - NO delivery/tax/contingency/promo — projection-only
- * - Designed so ranges are easy to update from a single config object
- *
- * NOTE: All price ranges are placeholders; replace with current live ranges.
- */
-
-// ---------------------- CONFIG ---------------------- //
-
-// Helper to build a range more readably
-const r = (min: number, max: number) => ({ min, max });
-
+/** Types */
+type BrandKey = "jossMain" | "allModern" | "birchLane";
 type Range = { min: number; max: number };
-
 type ItemDef = {
-  key: string; // stable id
+  key: string;
   label: string;
   quantityDefault?: number;
   required?: boolean;
-  ranges: {
-    [brand in BrandKey]: Range;
-  };
+  ranges: Record<BrandKey, Range>;
 };
+type RoomDef = { key: string; label: string; items: ItemDef[] };
+type TierKey = "good" | "better" | "best" | "custom";
 
-type RoomDef = {
-  key: string;
-  label: string;
-  items: ItemDef[];
-};
-
-type BrandKey = "jossMain" | "allModern" | "birchLane";
-
-const BRANDS: Record<BrandKey, { label: string; note?: string }> = {
+/** Helpers */
+const r = (min: number, max: number): Range => ({ min, max });
+const currency = (n: number) =>
+  n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const TIER_LABEL: Record<TierKey, string> = { good: "Good", better: "Better", best: "Best", custom: "Custom" };
+const BRANDS: Record<BrandKey, { label: string }> = {
   jossMain: { label: "Joss & Main" },
   allModern: { label: "AllModern" },
   birchLane: { label: "Birch Lane" },
 };
+function bandForTier(range: Range, tier: TierKey) {
+  const { min, max } = range;
+  if (tier === "good") return min;
+  if (tier === "best") return max;
+  if (tier === "better") return Math.round(min + (max - min) * 0.55);
+  return Math.round((min + max) / 2);
+}
 
-// Placeholder ranges – update with live data when ready
+/** CONFIG — replace these min/max with live site values */
 const ROOMS: RoomDef[] = [
   {
     key: "living",
@@ -133,31 +113,8 @@ const ROOMS: RoomDef[] = [
   },
 ];
 
-// ---------------------- UTILITIES ---------------------- //
-
-type TierKey = "good" | "better" | "best" | "custom";
-
-const TIER_LABEL: Record<TierKey, string> = {
-  good: "Good",
-  better: "Better",
-  best: "Best",
-  custom: "Custom",
-};
-
-function bandForTier(range: Range, tier: TierKey): number {
-  const { min, max } = range;
-  if (tier === "good") return min;
-  if (tier === "best") return max;
-  if (tier === "better") return Math.round(min + (max - min) * 0.55);
-  // custom handled elsewhere
-  return Math.round((min + max) / 2);
-}
-
-const currency = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-
-// ---------------------- COMPONENT ---------------------- //
-
-export default function BudgetCalculator() {
+/** Component */
+export default function App() {
   const [brand, setBrand] = useState<BrandKey>("jossMain");
   const [roomKey, setRoomKey] = useState<string>(ROOMS[0].key);
   const [tier, setTier] = useState<TierKey>("better");
@@ -167,8 +124,8 @@ export default function BudgetCalculator() {
 
   const room = useMemo(() => ROOMS.find(r => r.key === roomKey)!, [roomKey]);
 
-  // Initialize defaults on room or brand change
-  React.useEffect(() => {
+  // init defaults when room/brand changes
+  useMemo(() => {
     const defaults: Record<string, number> = {};
     const enabled: Record<string, boolean> = {};
     room.items.forEach(it => {
@@ -193,135 +150,145 @@ export default function BudgetCalculator() {
 
   const merchandise = useMemo(() => lines.reduce((sum, l) => sum + l.subtotal, 0), [lines]);
 
-  const reset = () => {
-    setTier("better");
-    // Quantities & toggles reset via useEffect when room/brand changes
-  };
+  /** Simple styles (no external libs) */
+  const wrap: React.CSSProperties = { maxWidth: 1100, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" };
+  const card: React.CSSProperties = { border: "1px solid #e5e5e5", borderRadius: 12, background: "#fff", padding: 16 };
+  const input: React.CSSProperties = { padding: 10, borderRadius: 8, border: "1px solid #d9d9d9", width: "100%" };
+  const btn: React.CSSProperties = { padding: "6px 10px", border: "1px solid #d9d9d9", borderRadius: 8, background: "#fafafa", cursor: "pointer" };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold mb-2">
-        Client Budget Calculator — Wayfair Specialty Brands (Projection)
-      </motion.h1>
-      <p className="text-sm text-muted-foreground mb-6">Select a brand, room, and tier. Quantities and line items are fixed to realistic defaults, but you can toggle items or adjust counts as needed. Ranges live in the config at the top.</p>
+    <div style={{ background: "#f7f7f9", minHeight: "100vh" }}>
+      <div style={wrap}>
+        <h1 style={{ fontSize: 22, marginBottom: 8 }}>Client Budget Calculator — Wayfair Specialty Brands (Projection)</h1>
+        <p style={{ color: "#666", marginBottom: 16 }}>
+          Select brand, room, and tier. Ranges live in the config at the top. Totals show merchandise only.
+        </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="col-span-1">
-          <CardContent className="p-4 space-y-4">
-            <div>
-              <Label className="mb-1 block">Brand</Label>
-              <Select value={brand} onValueChange={(v: BrandKey) => setBrand(v)}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Select brand" /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(BRANDS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="mb-1 block">Room</Label>
-              <Select value={roomKey} onValueChange={setRoomKey}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Select room" /></SelectTrigger>
-                <SelectContent>
-                  {ROOMS.map(r => (
-                    <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="mb-2 block">Tier</Label>
-              <Tabs value={tier} onValueChange={(v) => setTier(v as TierKey)}>
-                <TabsList className="grid grid-cols-4">
-                  {Object.entries(TIER_LABEL).map(([k, label]) => (
-                    <TabsTrigger key={k} value={k}>{label}</TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 2fr" }}>
+          {/* Controls */}
+          <div style={card}>
+            <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>Brand</div>
+            <select value={brand} onChange={(e) => setBrand(e.target.value as BrandKey)} style={input}>
+              {Object.entries(BRANDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+
+            <div style={{ height: 12 }} />
+
+            <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>Room</div>
+            <select value={roomKey} onChange={(e) => setRoomKey(e.target.value)} style={input}>
+              {ROOMS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </select>
+
+            <div style={{ height: 12 }} />
+
+            <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>Tier</div>
+            <select value={tier} onChange={(e) => setTier(e.target.value as TierKey)} style={input}>
+              <option value="good">Good</option>
+              <option value="better">Better</option>
+              <option value="best">Best</option>
+              <option value="custom">Custom</option>
+            </select>
+
+            <div style={{ marginTop: 8 }}>
               {tier === "custom" && (
-                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><Info className="w-3 h-3"/> Enter per-line exact unit prices in the table.</p>
+                <div style={{ fontSize: 12, color: "#777" }}>
+                  Enter per-line exact unit prices in the table below.
+                </div>
               )}
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="col-span-1 md:col-span-2">
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-medium">Line Items</h2>
-              <Button variant="ghost" size="sm" onClick={reset} className="gap-2"><RefreshCw className="w-4 h-4"/> Reset</Button>
+            <div style={{ marginTop: 12 }}>
+              <button
+                style={btn}
+                onClick={() => {
+                  setTier("better");
+                  // quantities/toggles reset when room/brand changes
+                }}
+              >
+                ↺ Reset
+              </button>
             </div>
+          </div>
 
-            <div className="overflow-auto rounded-2xl border">
-              <table className="min-w-full text-sm">
+          {/* Line items table */}
+          <div style={card}>
+            <div style={{ overflowX: "auto", borderRadius: 12 }}>
+              <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
                 <thead>
-                  <tr className="bg-muted/40 text-left">
-                    <th className="p-3">Include</th>
-                    <th className="p-3">Item</th>
-                    <th className="p-3">Range ({BRANDS[brand].label})</th>
-                    <th className="p-3">Unit ({tier === "custom" ? "Custom" : TIER_LABEL[tier]})</th>
-                    <th className="p-3">Qty</th>
-                    <th className="p-3 text-right">Subtotal</th>
+                  <tr style={{ background: "#fafafa", textAlign: "left" }}>
+                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Include</th>
+                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Item</th>
+                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Range ({BRANDS[brand].label})</th>
+                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Unit ({tier === "custom" ? "Custom" : TIER_LABEL[tier]})</th>
+                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Qty</th>
+                    <th style={{ padding: 12, borderBottom: "1px solid #eee", textAlign: "right" }}>Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((l) => (
-                    <tr key={l.key} className="border-t">
-                      <td className="p-3 align-middle">
-                        <Checkbox
+                    <tr key={l.key} style={{ borderTop: "1px solid #f0f0f0" }}>
+                      <td style={{ padding: 12, verticalAlign: "middle" }}>
+                        <input
+                          type="checkbox"
                           checked={!!enabledItems[l.key]}
-                          onCheckedChange={(v) => setEnabledItems(s => ({ ...s, [l.key]: !!v }))}
+                          onChange={(e) => setEnabledItems(s => ({ ...s, [l.key]: e.target.checked }))}
                         />
                       </td>
-                      <td className="p-3 align-middle">{l.label}</td>
-                      <td className="p-3 align-middle">{currency(l.range.min)} – {currency(l.range.max)}</td>
-                      <td className="p-3 align-middle">
+                      <td style={{ padding: 12, verticalAlign: "middle" }}>{l.label}</td>
+                      <td style={{ padding: 12, verticalAlign: "middle" }}>{currency(l.range.min)} – {currency(l.range.max)}</td>
+                      <td style={{ padding: 12, verticalAlign: "middle" }}>
                         {tier === "custom" ? (
-                          <Input
-                            inputMode="numeric"
-                            value={customPrices[l.key] ?? ("" as any)}
+                          <input
+                            type="number"
+                            value={Number.isFinite(customPrices[l.key]) ? customPrices[l.key] : ("" as any)}
                             placeholder={String(l.unit)}
                             onChange={(e) => setCustomPrices(s => ({ ...s, [l.key]: Number(e.target.value || 0) }))}
-                            className="w-28"
+                            style={{ ...input, width: 100 }}
                           />
                         ) : (
-                          <div className="w-28">{currency(l.unit)}</div>
+                          <div style={{ width: 100 }}>{currency(l.unit)}</div>
                         )}
                       </td>
-                      <td className="p-3 align-middle">
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => setQuantities(s => ({ ...s, [l.key]: Math.max(0, (s[l.key] ?? 0) - 1) }))}><Minus className="w-4 h-4"/></Button>
-                          <Input
-                            inputMode="numeric"
+                      <td style={{ padding: 12, verticalAlign: "middle" }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            style={btn}
+                            onClick={() => setQuantities(s => ({ ...s, [l.key]: Math.max(0, (s[l.key] ?? 0) - 1) }))}
+                          >-</button>
+                          <input
+                            type="number"
                             value={quantities[l.key] ?? 0}
                             onChange={(e) => setQuantities(s => ({ ...s, [l.key]: Math.max(0, Number(e.target.value || 0)) }))}
-                            className="w-16 text-center"
+                            style={{ ...input, width: 70, textAlign: "center" }}
                           />
-                          <Button variant="outline" size="icon" onClick={() => setQuantities(s => ({ ...s, [l.key]: (s[l.key] ?? 0) + 1 }))}><Plus className="w-4 h-4"/></Button>
+                          <button
+                            style={btn}
+                            onClick={() => setQuantities(s => ({ ...s, [l.key]: (s[l.key] ?? 0) + 1 }))}
+                          >+</button>
                         </div>
                       </td>
-                      <td className="p-3 align-middle text-right">{currency(l.subtotal)}</td>
+                      <td style={{ padding: 12, verticalAlign: "middle", textAlign: "right" }}>{currency(l.subtotal)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      {/* Totals (Merchandise only) */}
-      <div className="grid grid-cols-1">
-        <Card className="bg-gradient-to-b from-background to-muted/30">
-          <CardContent className="p-4 space-y-3">
-            <h3 className="font-medium">Room Merchandise Total</h3>
-            <div className="grid grid-cols-2 text-sm gap-y-1">
-              <div>Merchandise</div><div className="text-right text-base font-semibold">{currency(merchandise)}</div>
+        {/* Totals */}
+        <div style={{ marginTop: 16 }}>
+          <div style={card}>
+            <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16 }}>Room Merchandise Total</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, fontSize: 14 }}>
+              <div>Merchandise</div>
+              <div style={{ textAlign: "right", fontWeight: 600 }}>{currency(merchandise)}</div>
             </div>
-            <p className="text-xs text-muted-foreground">This projection excludes delivery, assembly, protection, taxes, contingency, and promos.</p>
-          </CardContent>
-        </Card>
+            <p style={{ color: "#777", fontSize: 12, marginTop: 8 }}>
+              Projection excludes delivery, assembly, protection, taxes, contingency, and promos.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
