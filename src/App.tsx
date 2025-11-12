@@ -38,10 +38,53 @@ function unitForTier(range: Range, tier: TierKey) {
   return Math.round((min + max) / 2);
 }
 
-/** ───────────────── Room Catalogs (editable ranges) ─────────────────
- * NOTE: Ranges are placeholders; swap with live site min/max per brand.
- * All labels are singular; use quantity controls to set pairs/sets.
- */
+/** ───────────────── Accessory Helper ───────────────── */
+function accessories({
+  rugLabel,
+  lampQty,
+  panelsQty,
+  addMirror = false,
+  rugRangeKey = "rugStd",
+}: {
+  rugLabel: string;
+  lampQty: number;
+  panelsQty: number;
+  addMirror?: boolean;
+  rugRangeKey?: "rugStd" | "rugLarge" | "rugSmall" | "rugOutdoor";
+}): ItemDef[] {
+  const rugRanges: Record<string, Record<BrandKey, Range>> = {
+    rugStd: { jossMain: r(180, 900), allModern: r(160, 1100), birchLane: r(250, 1600) },
+    rugLarge: { jossMain: r(350, 1500), allModern: r(320, 1700), birchLane: r(500, 2200) },
+    rugSmall: { jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(200, 900) },
+    rugOutdoor: { jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(200, 900) },
+  };
+
+  const items: ItemDef[] = [
+    { key: `rug_${rugLabel}`, label: rugLabel, ranges: rugRanges[rugRangeKey] },
+    { key: "lamp", label: "Table / Floor Lamp", quantityDefault: lampQty, ranges: {
+      jossMain: r(70, 350), allModern: r(60, 450), birchLane: r(120, 600) } },
+    { key: "windowPanel", label: "Window Panel", quantityDefault: panelsQty, ranges: {
+      jossMain: r(40, 160), allModern: r(40, 175), birchLane: r(60, 225) } },
+    { key: "decor", label: "Decor Bundle", quantityDefault: 1, ranges: {
+      jossMain: r(150, 600), allModern: r(150, 700), birchLane: r(250, 900) } },
+    { key: "wallArt", label: "Wall Art", quantityDefault: 1, ranges: {
+      jossMain: r(120, 500), allModern: r(120, 600), birchLane: r(220, 900) } },
+  ];
+  if (addMirror) {
+    items.push({
+      key: "mirror",
+      label: "Wall / Floor Mirror",
+      ranges: {
+        jossMain: r(120, 600),
+        allModern: r(120, 700),
+        birchLane: r(220, 1000),
+      },
+    });
+  }
+  return items;
+}
+
+/** ───────────────── Room Catalogs (placeholders—replace with live site values) ───────────────── */
 
 /* Living / Family */
 const LIVING: ItemDef[] = [
@@ -63,14 +106,7 @@ const LIVING: ItemDef[] = [
     jossMain: r(120, 600), allModern: r(110, 700), birchLane: r(200, 900) } },
   { key: "console",    label: "Console Table", ranges: {
     jossMain: r(180, 900), allModern: r(160, 1100), birchLane: r(300, 1500) } },
-  { key: "rug",        label: "Area Rug (8×10)", required: true, ranges: {
-    jossMain: r(180, 900), allModern: r(160, 1100), birchLane: r(250, 1600) } },
-  { key: "curtain",    label: "Window Panel", ranges: {
-    jossMain: r(40, 160), allModern: r(40, 175), birchLane: r(60, 225) } },
-  { key: "lamp",       label: "Table / Floor Lamp", quantityDefault: 2, ranges: {
-    jossMain: r(70, 350), allModern: r(60, 450), birchLane: r(120, 600) } },
-  { key: "decor",      label: "Decor Bundle", ranges: {
-    jossMain: r(150, 600), allModern: r(150, 700), birchLane: r(250, 900) } },
+  ...accessories({ rugLabel: "Area Rug (8×10)", lampQty: 2, panelsQty: 4, addMirror: true, rugRangeKey: "rugStd" }),
 ];
 
 /* Primary Bedroom */
@@ -87,12 +123,7 @@ const PRIMARY_BEDROOM: ItemDef[] = [
     jossMain: r(260, 1300), allModern: r(240, 1500), birchLane: r(520, 2200) } },
   { key: "bench",      label: "Bed Bench", ranges: {
     jossMain: r(180, 800), allModern: r(160, 900), birchLane: r(280, 1200) } },
-  { key: "mirror",     label: "Wall / Floor Mirror", ranges: {
-    jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(220, 1000) } },
-  { key: "rugPB",      label: "Area Rug (9×12)", ranges: {
-    jossMain: r(350, 1500), allModern: r(320, 1700), birchLane: r(500, 2200) } },
-  { key: "lampPB",     label: "Bedside Lamp", quantityDefault: 2, ranges: {
-    jossMain: r(90, 380), allModern: r(90, 450), birchLane: r(150, 700) } },
+  ...accessories({ rugLabel: "Area Rug (9×12)", lampQty: 2, panelsQty: 4, addMirror: true, rugRangeKey: "rugLarge" }),
   { key: "bedding",    label: "Bedding Set (duvet/sheets)", ranges: {
     jossMain: r(200, 600), allModern: r(200, 750), birchLane: r(280, 950) } },
 ];
@@ -107,10 +138,7 @@ const SECONDARY_BEDROOM: ItemDef[] = [
     jossMain: r(120, 600), allModern: r(110, 700), birchLane: r(220, 900) } },
   { key: "dresser",    label: "Dresser", ranges: {
     jossMain: r(250, 1400), allModern: r(240, 1600), birchLane: r(500, 2300) } },
-  { key: "rugBR",      label: "Area Rug (8×10)", ranges: {
-    jossMain: r(180, 900), allModern: r(160, 1100), birchLane: r(250, 1600) } },
-  { key: "lampBR",     label: "Table Lamp", quantityDefault: 2, ranges: {
-    jossMain: r(80, 320), allModern: r(80, 380), birchLane: r(120, 520) } },
+  ...accessories({ rugLabel: "Area Rug (8×10)", lampQty: 2, panelsQty: 4, addMirror: false, rugRangeKey: "rugStd" }),
   { key: "bedding",    label: "Bedding Set (duvet/sheets)", ranges: {
     jossMain: r(180, 550), allModern: r(170, 700), birchLane: r(250, 900) } },
 ];
@@ -125,10 +153,7 @@ const GUEST_BEDROOM: ItemDef[] = [
     jossMain: r(110, 520), allModern: r(110, 620), birchLane: r(200, 820) } },
   { key: "dresser",    label: "Dresser", ranges: {
     jossMain: r(240, 1200), allModern: r(220, 1400), birchLane: r(460, 2000) } },
-  { key: "rugGB",      label: "Area Rug (8×10)", ranges: {
-    jossMain: r(180, 820), allModern: r(160, 980), birchLane: r(240, 1500) } },
-  { key: "lampGB",     label: "Table Lamp", quantityDefault: 2, ranges: {
-    jossMain: r(70, 280), allModern: r(70, 340), birchLane: r(110, 480) } },
+  ...accessories({ rugLabel: "Area Rug (8×10)", lampQty: 2, panelsQty: 4, addMirror: false, rugRangeKey: "rugStd" }),
   { key: "bedding",    label: "Bedding Set (duvet/sheets)", ranges: {
     jossMain: r(170, 520), allModern: r(170, 650), birchLane: r(240, 850) } },
 ];
@@ -137,17 +162,14 @@ const GUEST_BEDROOM: ItemDef[] = [
 const NURSERY: ItemDef[] = [
   { key: "crib",       label: "Crib", required: true, ranges: {
     jossMain: r(180, 900), allModern: r(200, 1000), birchLane: r(350, 1400) } },
-  { key: "mattress",   label: "Crib Mattress", required: true, ranges: {
+  { key: "mattressCrib",   label: "Crib Mattress", required: true, ranges: {
     jossMain: r(70, 280), allModern: r(70, 320), birchLane: r(90, 380) } },
   { key: "dresser",    label: "Dresser / Changing Table", ranges: {
     jossMain: r(220, 1100), allModern: r(240, 1300), birchLane: r(420, 1900) } },
   { key: "glider",     label: "Glider / Rocker", ranges: {
     jossMain: r(220, 900), allModern: r(240, 1100), birchLane: r(380, 1400) } },
-  { key: "blackout",   label: "Blackout Curtain Panel", quantityDefault: 2, ranges: {
-    jossMain: r(50, 160), allModern: r(55, 175), birchLane: r(80, 225) } },
-  { key: "rugNU",      label: "Area Rug (5×8)", ranges: {
-    jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(200, 900) } },
-  { key: "storage",    label: "Toy / Book Storage", ranges: {
+  ...accessories({ rugLabel: "Area Rug (5×8)", lampQty: 1, panelsQty: 2, addMirror: false, rugRangeKey: "rugSmall" }),
+  { key: "storageToy", label: "Toy / Book Storage", ranges: {
     jossMain: r(80, 350), allModern: r(90, 420), birchLane: r(140, 650) } },
 ];
 
@@ -155,18 +177,15 @@ const NURSERY: ItemDef[] = [
 const PLAYROOM: ItemDef[] = [
   { key: "sofa",       label: "Sofa / Sleeper", ranges: {
     jossMain: r(600, 2200), allModern: r(600, 2600), birchLane: r(1000, 3800) } },
-  { key: "table",      label: "Activity / Craft Table", ranges: {
+  { key: "activityTable",      label: "Activity / Craft Table", ranges: {
     jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(220, 900) } },
-  { key: "chair",      label: "Kid Chair / Pouf", quantityDefault: 2, ranges: {
+  { key: "kidSeat",      label: "Kid Chair / Pouf", quantityDefault: 2, ranges: {
     jossMain: r(60, 280), allModern: r(60, 320), birchLane: r(100, 450) } },
   { key: "storage",    label: "Toy / Cubby Storage", ranges: {
     jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(200, 900) } },
-  { key: "rugPL",      label: "Area Rug (8×10)", ranges: {
-    jossMain: r(180, 900), allModern: r(160, 1100), birchLane: r(250, 1600) } },
+  ...accessories({ rugLabel: "Area Rug (8×10)", lampQty: 1, panelsQty: 2, addMirror: false, rugRangeKey: "rugStd" }),
   { key: "bookcase",   label: "Bookcase", ranges: {
     jossMain: r(140, 700), allModern: r(130, 900), birchLane: r(220, 1300) } },
-  { key: "lamp",       label: "Floor / Table Lamp", ranges: {
-    jossMain: r(70, 320), allModern: r(70, 380), birchLane: r(120, 520) } },
 ];
 
 /* Dining */
@@ -179,9 +198,8 @@ const DINING: ItemDef[] = [
     jossMain: r(300, 1600), allModern: r(280, 1800), birchLane: r(600, 2600) } },
   { key: "bar",       label: "Bar / Storage Cabinet", ranges: {
     jossMain: r(220, 1100), allModern: r(220, 1300), birchLane: r(450, 1900) } },
-  { key: "rugDR",     label: "Area Rug (8×10)", ranges: {
-    jossMain: r(180, 900), allModern: r(160, 1100), birchLane: r(250, 1600) } },
-  { key: "lightDR",   label: "Chandelier / Pendant", ranges: {
+  ...accessories({ rugLabel: "Area Rug (8×10)", lampQty: 0, panelsQty: 2, addMirror: false, rugRangeKey: "rugStd" }),
+  { key: "lightingDR",   label: "Chandelier / Pendant", ranges: {
     jossMain: r(150, 700), allModern: r(140, 900), birchLane: r(250, 1300) } },
 ];
 
@@ -189,28 +207,37 @@ const DINING: ItemDef[] = [
 const OFFICE: ItemDef[] = [
   { key: "desk",      label: "Desk", required: true, ranges: {
     jossMain: r(150, 900), allModern: r(140, 1100), birchLane: r(300, 1600) } },
-  { key: "chair",     label: "Office Chair", required: true, ranges: {
+  { key: "chairOffice",     label: "Office Chair", required: true, ranges: {
     jossMain: r(120, 600), allModern: r(110, 800), birchLane: r(220, 1100) } },
   { key: "storage",   label: "Bookcase / Storage", ranges: {
     jossMain: r(120, 700), allModern: r(110, 900), birchLane: r(220, 1300) } },
-  { key: "rugOF",     label: "Area Rug (5×8)", ranges: {
-    jossMain: r(120, 600), allModern: r(110, 700), birchLane: r(200, 900) } },
-  { key: "lampOF",    label: "Task / Desk Lamp", ranges: {
+  { key: "file",      label: "Filing Cabinet", ranges: {
+    jossMain: r(100, 450), allModern: r(110, 520), birchLane: r(180, 800) } },
+  { key: "taskLight", label: "Task Lamp", ranges: {
     jossMain: r(60, 250), allModern: r(55, 300), birchLane: r(100, 450) } },
+  ...accessories({ rugLabel: "Area Rug (5×8)", lampQty: 1, panelsQty: 2, addMirror: true, rugRangeKey: "rugSmall" }),
 ];
 
-/* Entryway */
+/* Entryway (full) */
 const ENTRY: ItemDef[] = [
-  { key: "console",    label: "Console Table", ranges: {
+  { key: "entryConsole", label: "Console Table", required: true, quantityDefault: 1, ranges: {
     jossMain: r(150, 900), allModern: r(140, 1100), birchLane: r(300, 1500) } },
-  { key: "mirror",     label: "Mirror", ranges: {
-    jossMain: r(100, 450), allModern: r(100, 500), birchLane: r(180, 800) } },
-  { key: "bench",      label: "Bench", ranges: {
+  { key: "entryBench", label: "Bench", quantityDefault: 1, ranges: {
     jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(220, 900) } },
-  { key: "runner",     label: "Runner (2.5×8)", ranges: {
-    jossMain: r(80, 300), allModern: r(80, 350), birchLane: r(120, 500) } },
-  { key: "lamp",       label: "Table Lamp", ranges: {
+  { key: "entryMirror", label: "Mirror", quantityDefault: 1, ranges: {
+    jossMain: r(100, 450), allModern: r(100, 500), birchLane: r(180, 800) } },
+  { key: "entryLamp", label: "Table Lamp", quantityDefault: 1, ranges: {
     jossMain: r(70, 250), allModern: r(70, 300), birchLane: r(110, 450) } },
+  { key: "entryRug", label: "Runner (2.5×8)", quantityDefault: 1, ranges: {
+    jossMain: r(80, 300), allModern: r(80, 350), birchLane: r(120, 500) } },
+  { key: "entryHooks", label: "Wall Hooks / Rack", quantityDefault: 1, ranges: {
+    jossMain: r(30, 140), allModern: r(35, 160), birchLane: r(60, 220) } },
+  { key: "entryBasket", label: "Storage Basket", quantityDefault: 2, ranges: {
+    jossMain: r(25, 120), allModern: r(25, 140), birchLane: r(40, 180) } },
+  { key: "entryTray", label: "Catchall / Tray", quantityDefault: 1, ranges: {
+    jossMain: r(20, 90), allModern: r(20, 110), birchLane: r(35, 150) } },
+  { key: "entryArt", label: "Wall Art", quantityDefault: 1, ranges: {
+    jossMain: r(120, 500), allModern: r(120, 600), birchLane: r(220, 900) } },
 ];
 
 /* Outdoor Living */
@@ -225,10 +252,9 @@ const OUTDOOR_LIVING: ItemDef[] = [
     jossMain: r(80, 300), allModern: r(80, 360), birchLane: r(120, 500) } },
   { key: "umbrella",   label: "Umbrella", ranges: {
     jossMain: r(120, 600), allModern: r(130, 700), birchLane: r(200, 900) } },
-  { key: "rugOD",      label: "Outdoor Rug (8×10)", ranges: {
-    jossMain: r(120, 600), allModern: r(120, 700), birchLane: r(200, 900) } },
   { key: "fire",       label: "Fire Pit / Table", ranges: {
     jossMain: r(220, 1200), allModern: r(240, 1400), birchLane: r(400, 1800) } },
+  ...accessories({ rugLabel: "Outdoor Rug (8×10)", lampQty: 0, panelsQty: 0, addMirror: false, rugRangeKey: "rugOutdoor" }),
 ];
 
 /* Outdoor Dining */
@@ -303,15 +329,12 @@ export default function App() {
     setCustomPrices({});
   }, [scope, roomKey, brand]);
 
-  // compute one room’s merch (using its defaults)
+  // compute one room’s merch (using its defaults); ignore custom in whole-home to avoid collisions
   function computeRoomMerch(roomDef: RoomDef, brandKey: BrandKey, tierKey: TierKey) {
     return roomDef.items.reduce((sum, it) => {
       const qty = it.quantityDefault ?? (it.required ? 1 : 0);
       if (!qty) return sum;
-      const unit =
-        tierKey === "custom" && customPrices[it.key]
-          ? customPrices[it.key]
-          : unitForTier(it.ranges[brandKey], tierKey);
+      const unit = unitForTier(it.ranges[brandKey], tierKey);
       return sum + unit * qty;
     }, 0);
   }
@@ -337,10 +360,7 @@ export default function App() {
   // whole-home totals
   const wholeHome = useMemo(() => {
     if (scope !== "wholeHome") return null;
-    const keys = [
-      "living","primaryBedroom","secondaryBedroom","guestBedroom",
-      "nursery","playroom","dining","office","entry","outdoorLiving","outdoorDining"
-    ] as const;
+    const keys = ROOMS.map(r => r.key) as Array<typeof ROOMS[number]["key"]>;
 
     const totals = { good: 0, better: 0, best: 0 };
     const perRoomRows: Array<{label:string; count:number; good:number; better:number; best:number}> = [];
@@ -348,10 +368,6 @@ export default function App() {
     keys.forEach((k) => {
       const def = ROOMS.find(r => r.key === k)!;
       const count = (homeCounts as any)[k] ?? 0;
-      if (!count) {
-        perRoomRows.push({ label: def.label, count, good: 0, better: 0, best: 0 });
-        return;
-      }
       const good   = computeRoomMerch(def, brand, "good") * count;
       const better = computeRoomMerch(def, brand, "better") * count;
       const best   = computeRoomMerch(def, brand, "best") * count;
@@ -435,32 +451,20 @@ export default function App() {
               <>
                 <div style={{ marginBottom: 8, fontWeight: 600 }}>Whole-Home Counts</div>
                 <div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr 1fr" }}>
-                  {[
-                    { key: "living", label: "Living / Family" },
-                    { key: "primaryBedroom", label: "Primary Bedrooms" },
-                    { key: "secondaryBedroom", label: "Secondary Bedrooms" },
-                    { key: "guestBedroom", label: "Guest Bedrooms" },
-                    { key: "nursery", label: "Nurseries" },
-                    { key: "playroom", label: "Playrooms" },
-                    { key: "dining", label: "Dining Areas" },
-                    { key: "office", label: "Home Offices" },
-                    { key: "entry", label: "Entryways" },
-                    { key: "outdoorLiving", label: "Outdoor Living" },
-                    { key: "outdoorDining", label: "Outdoor Dining" },
-                  ].map(({ key, label }) => (
-                    <div key={key}>
-                      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
+                  {ROOMS.map(r => (
+                    <div key={r.key}>
+                      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{r.label}</div>
                       <input
                         type="number"
                         min={0}
-                        value={(homeCounts as any)[key]}
-                        onChange={(e) => setHomeCounts(s => ({ ...s, [key]: Math.max(0, Number(e.target.value || 0)) }))}
+                        value={(homeCounts as any)[r.key] ?? 0}
+                        onChange={(e) => setHomeCounts(s => ({ ...s, [r.key]: Math.max(0, Number(e.target.value || 0)) }))}
                         style={input}
                       />
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 8, ...small }}>Uses each room’s default package (editable in the catalogs above).</div>
+                <div style={{ marginTop: 8, ...small }}>Uses default item sets per room (editable in the catalogs above).</div>
               </>
             )}
           </div>
