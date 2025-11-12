@@ -5,18 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Info, Plus, Minus, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 
 /**
- * Wayfair Specialty Brands Budget Calculator
+ * Wayfair Specialty Brands Budget Calculator (Projection Mode)
  * - Supports Joss & Main, AllModern, Birch Lane
  * - Room presets with editable line items and price ranges
  * - Good/Better/Best tiering mapped to range bands
- * - Add-ons: delivery/white glove, assembly, protection plan
- * - Tax, promo, and contingency controls
+ * - NO delivery/tax/contingency/promo — projection-only
  * - Designed so ranges are easy to update from a single config object
  *
  * NOTE: All price ranges are placeholders; replace with current live ranges.
@@ -167,15 +165,6 @@ export default function BudgetCalculator() {
   const [enabledItems, setEnabledItems] = useState<Record<string, boolean>>({});
   const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
 
-  // Add-ons & global controls
-  const [taxRate, setTaxRate] = useState<number>(6.25);
-  const [promo, setPromo] = useState<number>(0); // flat $ discount
-  const [contingencyPct, setContingencyPct] = useState<number>(10);
-  const [deliveryPct, setDeliveryPct] = useState<number>(3); // % of merchandise
-  const [whiteGlove, setWhiteGlove] = useState<boolean>(false);
-  const [assemblyPct, setAssemblyPct] = useState<number>(0); // % of merchandise
-  const [protectionPct, setProtectionPct] = useState<number>(0); // % of merchandise
-
   const room = useMemo(() => ROOMS.find(r => r.key === roomKey)!, [roomKey]);
 
   // Initialize defaults on room or brand change
@@ -204,34 +193,17 @@ export default function BudgetCalculator() {
 
   const merchandise = useMemo(() => lines.reduce((sum, l) => sum + l.subtotal, 0), [lines]);
 
-  const addOns = useMemo(() => {
-    const delivery = Math.round(merchandise * (whiteGlove ? Math.max(0.06, deliveryPct / 100) : deliveryPct / 100));
-    const assembly = Math.round(merchandise * (assemblyPct / 100));
-    const protection = Math.round(merchandise * (protectionPct / 100));
-    const sub = merchandise + delivery + assembly + protection - promo;
-    const tax = Math.round(sub * (taxRate / 100));
-    const contingency = Math.round(sub * (contingencyPct / 100));
-    const total = sub + tax + contingency;
-    return { delivery, assembly, protection, tax, contingency, sub, total };
-  }, [merchandise, deliveryPct, whiteGlove, assemblyPct, protectionPct, promo, taxRate, contingencyPct]);
-
   const reset = () => {
     setTier("better");
-    setPromo(0);
-    setTaxRate(6.25);
-    setContingencyPct(10);
-    setDeliveryPct(3);
-    setWhiteGlove(false);
-    setAssemblyPct(0);
-    setProtectionPct(0);
+    // Quantities & toggles reset via useEffect when room/brand changes
   };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold mb-2">
-        Client Budget Calculator — Wayfair Specialty Brands
+        Client Budget Calculator — Wayfair Specialty Brands (Projection)
       </motion.h1>
-      <p className="text-sm text-muted-foreground mb-6">Select a brand, room, and tier. Adjust quantities, toggle line items, or switch to Custom to input exact unit prices. All ranges are editable in the config.</p>
+      <p className="text-sm text-muted-foreground mb-6">Select a brand, room, and tier. Quantities and line items are fixed to realistic defaults, but you can toggle items or adjust counts as needed. Ranges live in the config at the top.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="col-span-1">
@@ -339,91 +311,18 @@ export default function BudgetCalculator() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h3 className="font-medium">Add‑Ons</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Delivery %</Label>
-                <div className="flex items-center gap-2">
-                  <Slider value={[deliveryPct]} onValueChange={(v) => setDeliveryPct(v[0])} max={10} step={0.5}/>
-                  <div className="w-12 text-right text-sm">{deliveryPct}%</div>
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  <Checkbox checked={whiteGlove} onCheckedChange={v => setWhiteGlove(!!v)} />
-                  <span className="text-xs text-muted-foreground">White glove (min 6%)</span>
-                </div>
-              </div>
-              <div>
-                <Label>Assembly %</Label>
-                <div className="flex items-center gap-2">
-                  <Slider value={[assemblyPct]} onValueChange={(v) => setAssemblyPct(v[0])} max={20} step={1}/>
-                  <div className="w-12 text-right text-sm">{assemblyPct}%</div>
-                </div>
-              </div>
-              <div>
-                <Label>Protection Plan %</Label>
-                <div className="flex items-center gap-2">
-                  <Slider value={[protectionPct]} onValueChange={(v) => setProtectionPct(v[0])} max={15} step={0.5}/>
-                  <div className="w-12 text-right text-sm">{protectionPct}%</div>
-                </div>
-              </div>
-              <div>
-                <Label>Promo ($)</Label>
-                <Input inputMode="numeric" value={promo} onChange={(e) => setPromo(Number(e.target.value || 0))} />
-              </div>
+      {/* Totals (Merchandise only) */}
+      <div className="grid grid-cols-1">
+        <Card className="bg-gradient-to-b from-background to-muted/30">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="font-medium">Room Merchandise Total</h3>
+            <div className="grid grid-cols-2 text-sm gap-y-1">
+              <div>Merchandise</div><div className="text-right text-base font-semibold">{currency(merchandise)}</div>
             </div>
+            <p className="text-xs text-muted-foreground">This projection excludes delivery, assembly, protection, taxes, contingency, and promos.</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h3 className="font-medium">Taxes & Contingency</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Tax Rate</Label>
-                <div className="flex items-center gap-2">
-                  <Slider value={[taxRate]} onValueChange={(v) => setTaxRate(v[0])} max={12} step={0.25}/>
-                  <div className="w-16 text-right text-sm">{taxRate}%</div>
-                </div>
-              </div>
-              <div>
-                <Label>Contingency</Label>
-                <div className="flex items-center gap-2">
-                  <Slider value={[contingencyPct]} onValueChange={(v) => setContingencyPct(v[0])} max={25} step={1}/>
-                  <div className="w-16 text-right text-sm">{contingencyPct}%</div>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">Use contingency to cover freight variability, backorder swaps, last‑mile fees, or styling add‑ons.</p>
-          </CardContent>
-        </Card>
-
-        <TotalsCard merchandise={merchandise} addOns={addOns} />
       </div>
     </div>
-  );
-}
-
-function TotalsCard({ merchandise, addOns }: { merchandise: number; addOns: { delivery: number; assembly: number; protection: number; tax: number; contingency: number; sub: number; total: number; } }) {
-  return (
-    <Card className="bg-gradient-to-b from-background to-muted/30">
-      <CardContent className="p-4 space-y-3">
-        <h3 className="font-medium">Totals</h3>
-        <div className="grid grid-cols-2 text-sm gap-y-1">
-          <div>Merchandise</div><div className="text-right font-medium">{currency(merchandise)}</div>
-          <div>Delivery</div><div className="text-right">{currency(addOns.delivery)}</div>
-          <div>Assembly</div><div className="text-right">{currency(addOns.assembly)}</div>
-          <div>Protection Plan</div><div className="text-right">{currency(addOns.protection)}</div>
-          <div>Promo</div><div className="text-right">-{currency(Math.max(0, addOns.sub - merchandise - addOns.delivery - addOns.assembly - addOns.protection))}</div>
-          <div>Tax</div><div className="text-right">{currency(addOns.tax)}</div>
-          <div>Contingency</div><div className="text-right">{currency(addOns.contingency)}</div>
-          <div className="col-span-2 border-t my-1" />
-          <div className="text-base">Client Budget Target</div><div className="text-right text-base font-semibold">{currency(addOns.total)}</div>
-        </div>
-        <p className="text-xs text-muted-foreground">Adjust line items, tiers, and controls to meet your client’s target budget. Share a screenshot or export values to a deck.</p>
-      </CardContent>
-    </Card>
   );
 }
